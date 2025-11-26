@@ -1,0 +1,74 @@
+.header{
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    position: sticky;
+    top: 0;
+    left: 0;
+    height: 70px;
+    background-color: rgb(255, 255, 255 ,0.8);
+    backdrop-filter: blur(4px);
+    z-index: 50;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+.menuOn,.menuOff{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%; 
+    position: absolute;
+    left: 0px;
+    top: 20px;
+}
+.headerUserActions{
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding-right: 40px;
+}
+.menuBtn{
+    display: none; 
+    position: absolute;
+    top: 5px;
+    right: 30px;
+}
+.nav{
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+@media (max-width:820px){
+    .menuOn,.menuOff{
+        flex-direction: column;
+        align-items: flex-start;
+        transition: 0.3s max-height;
+        overflow: hidden;
+    }
+    .menuOn{     
+        max-height: 500px;
+    }
+    .menuOff{
+        max-height: 50px; 
+    }
+    .nav{
+        width: 100%;
+        background-color: rgb(255, 255, 255 ,0.8);
+        backdrop-filter: blur(4px);
+        margin-top: 18px;
+        padding-left: 40px;
+        padding-top: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .headerUserActions{
+        width: 100%;
+        background-color: rgb(255, 255, 255 ,0.8);
+        backdrop-filter: blur(4px); 
+        padding-top: 20px;
+        padding-bottom: 20px;
+        padding-left: 40px; 
+    }
+    .menuBtn{
+        display: block;
+    }
+}

@@ -1,0 +1,417 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")  
+}
+
+enum Role {
+  user
+  admin
+  guide
+}
+
+enum State {
+  confirmed
+  pending
+  cancelled
+  rejected
+}
+
+model UserLanguage {
+  userId     String
+  languageId Int
+  language   Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, languageId])
+  @@unique([userId, languageId])
+  @@index([userId])
+}
+
+model Language {
+  id        Int            @id @default(autoincrement())
+  name      String         @unique
+  languages UserLanguage[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model User {
+  id                  String          @id @default(cuid())
+  email               String          @unique
+  name                String          @db.VarChar(100)
+  password            String?
+  image               String?
+  dateOfBirth         DateTime?
+  location            String          @default("egypt/cairo")
+  phone               String?         @db.VarChar(20)
+  bio                 String          @default("Here to take you on amazing journeys across Egypt")
+  publicid            String?
+  languages           UserLanguage[]
+  banned              Boolean         @default(false)
+  emailVerified       DateTime?       @map("email_verified")
+  role                Role            @default(user)
+  isDeleted           Boolean         @default(false)
+  deletedUser         String?
+  allowGuestMessages  Boolean         @default(false)
+  replies             Replies[]
+  questions           Questions[]     @relation("questioner")
+  questionsReplies    Questions[]     @relation("responder")
+  wishlist            Wishlist[]
+  reviews             Reviews[]
+  booking             Booking[]
+  accounts            Account[]
+  Trip                Trip[]
+  announcements       Announcements[]
+  guideReviewsAsUser  guideReviews[]  @relation("GuideReviewsUser")
+  guideReviewsAsGuide guideReviews[]  @relation("GuideReviewsGuide")
+  wallet              Decimal         @default(0)
+  reports             Reports[]
+  transactions        Transactions[]  @relation("UserTransactions")
+  approvedTxns        Transactions[]  @relation("ApprovedTransactions")
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+}
+
+model Questions {
+  id        Int              @id @default(autoincrement())
+  name      String
+  userId    String?
+  user      User?            @relation("questioner", fields: [userId], references: [id])
+  phone     String?
+  adminId   String?
+  admin     User?            @relation("responder", fields: [adminId], references: [id])
+  status    messageStatus    @default(pending)
+  replies   Replies[]
+  url       String?
+  publicId  String?
+  email     String
+  question  String?
+  source    Source
+  category  questionCategory
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([adminId])
+  @@index([userId])
+}
+
+enum Source {
+  logged_in
+  linked_email
+  guest
+}
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String
+  value     Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Replies {
+  id         Int       @id @default(autoincrement())
+  text       String?
+  questionId Int
+  url        String?
+  publicId   String?
+  question   Questions @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User      @relation(fields: [senderId], references: [id])
+  createdAt  DateTime  @default(now())
+
+  @@index([senderId])
+}
+
+enum messageStatus {
+  pending
+  waiting_for_user
+  waiting_for_admin
+  closed
+}
+
+enum questionCategory {
+  booking_inquiry
+  technical_support
+  cancellation
+  feedback
+  become_a_guide
+  partnership
+  other
+}
+
+model Account {
+  id                Int     @id @default(autoincrement())
+  userId            String  @map("user_id")
+  user              User    @relation(fields: [userId], references: [id])
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+}
+
+model guideReviews {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  guideId   String
+  rate      Int
+  guide     User     @relation("GuideReviewsGuide", fields: [guideId], references: [id])
+  user      User     @relation("GuideReviewsUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Wishlist {
+  id        Int      @id @default(autoincrement())
+  tripid    Int
+  userid    String
+  trip      Trip     @relation(fields: [tripid], references: [id])
+  user      User     @relation(fields: [userid], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userid, tripid])
+  @@index([userid])
+}
+
+model Tokens {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  token     String   @unique
+  expires   String
+  createdAt DateTime @default(now())
+}
+
+model TripFeatures {
+  featureId Int
+  tripId    Int
+  feature   Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  trip      Trip    @relation(fields: [tripId], references: [id])
+
+  @@id([featureId, tripId])
+  @@index([tripId])
+}
+
+model Feature {
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  description String?
+  features    TripFeatures[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model Categories {
+  id        Int      @id @default(autoincrement())
+  name      String
+  banned    Boolean  @default(false)
+  trips     Trip[]
+  createdAt DateTime @default(now())
+}
+
+model Trip {
+  id           Int             @id @default(autoincrement())
+  title        String          @db.VarChar(200)
+  description  String
+  location     String
+  meetingPlace String
+  duration     String
+  categoryid   Int
+  guideid      String
+  price        Int
+  banned       Boolean         @default(false)
+  features     TripFeatures[]
+  wishlist     Wishlist[]
+  guide        User            @relation(fields: [guideid], references: [id])
+  category     Categories      @relation(fields: [categoryid], references: [id])
+  dates        Date[]
+  reviews      Reviews[]
+  booking      Booking[]
+  images       Timages[]
+  announcement Announcements[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model Announcements {
+  id          Int      @id @default(autoincrement())
+  title       String?
+  description String
+  tripId      Int?
+  adminId     String
+  admin       User     @relation(fields: [adminId], references: [id])
+  show        Boolean  @default(true)
+  trip        Trip?    @relation(fields: [tripId], references: [id])
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([tripId])
+  @@index([adminId])
+}
+
+model Timages {
+  id        Int      @id @default(autoincrement())
+  tripid    Int
+  url       String
+  publicid  String
+  trip      Trip     @relation(fields: [tripid], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tripid])
+}
+
+model Date {
+  id           Int       @id @default(autoincrement())
+  date         DateTime
+  tripid       Int
+  trip         Trip      @relation(fields: [tripid], references: [id], onDelete: Cascade)
+  maxpeople    Int
+  banned       Boolean   @default(false)
+  bookings     Booking[]
+  cancelled    Boolean   @default(false)
+  originalDate DateTime
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tripid])
+}
+
+model Booking {
+  id          Int            @id @default(autoincrement())
+  dateid      Int
+  tripid      Int
+  userid      String
+  people      Int
+  status      State          @default(pending)
+  user        User           @relation(fields: [userid], references: [id])
+  date        Date           @relation(fields: [dateid], references: [id])
+  trip        Trip           @relation(fields: [tripid], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  transaction Transactions[]
+
+  @@index([tripid])
+  @@index([dateid])
+  @@index([userid])
+}
+
+model Reviews {
+  id        Int           @id @default(autoincrement())
+  rate      Int
+  comment   String?
+  userid    String
+  tripid    Int
+  banned    Boolean       @default(false)
+  images    ReviewImage[]
+  user      User          @relation(fields: [userid], references: [id])
+  trip      Trip          @relation(fields: [tripid], references: [id], onDelete: Cascade)
+  reports   Reports[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([tripid])
+}
+
+model ReviewImage {
+  id        Int      @id @default(autoincrement())
+  url       String
+  publicid  String
+  reviewid  Int
+  tripid    Int
+  review    Reviews  @relation(fields: [reviewid], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Reports {
+  id        Int      @id @default(autoincrement())
+  text      String
+  reviewid  Int
+  review    Reviews  @relation(fields: [reviewid], references: [id], onDelete: Cascade)
+  userid    String
+  user      User     @relation(fields: [userid], references: [id])
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userid, reviewid])
+}
+
+model Transactions {
+  id                  Int               @id @default(autoincrement())
+  user                User              @relation("UserTransactions", fields: [userId], references: [id])
+  parentTransactionId Int?
+  relatedTransaction  Transactions?     @relation("TransactionRelation", fields: [parentTransactionId], references: [id])
+  childTransactions   Transactions[]    @relation("TransactionRelation")
+  userId              String
+  isEdited            Boolean           @default(false)
+  type                TransactionType
+  amount              Decimal
+  userBankName        String?
+  userAccountName     String?
+  userAccountNumber   String?
+  userPhoneNumber     String?
+  transactionId       String?
+  paymentAccountId    Int?
+  proofUrl            String?
+  proofId             String?
+  userNotes           String?
+  adminNotes          String?
+  adminId             String?
+  bookingid           Int?
+  admin               User?             @relation("ApprovedTransactions", fields: [adminId], references: [id])
+  paymentAccount      PaymentAccount?   @relation(fields: [paymentAccountId], references: [id])
+  booking             Booking?          @relation(fields: [bookingid], references: [id])
+  status              TransactionStatus @default(pending)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([adminId])
+}
+
+enum TransactionType {
+  deposit
+  withdrawal
+  booking_deduct
+  booking_refund
+  account_closure
+}
+
+enum TransactionStatus {
+  pending
+  approved
+  rejected
+}
+
+model PaymentAccount {
+  id            Int            @id @default(autoincrement())
+  method        PaymentMethod
+  phoneNumber   String?
+  bankName      String?
+  accountName   String?
+  accountNumber String?
+  iban          String?
+  transactions  Transactions[]
+  isActive      Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+enum PaymentMethod {
+  bank
+  vodafone
+}
